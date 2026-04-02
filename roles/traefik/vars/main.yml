@@ -1,0 +1,5 @@
+---
+_traefik_default_rule: "{{
+  'null' if not traefik_expose_compose_paths
+  else '\"HostRegexp(`.*`) && PathPrefix(`/{{ index .Labels \\\"com.docker.compose.project\\\" }}/{{ index .Labels \\\"com.docker.compose.service\\\" }}`)\"'
+}}"

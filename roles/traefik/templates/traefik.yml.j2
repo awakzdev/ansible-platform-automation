@@ -1,0 +1,22 @@
+---
+# {{ ansible_managed }}
+providers:
+  docker:
+    defaultRule: {{ _traefik_default_rule }}
+    exposedByDefault: false
+  file:
+    filename: /etc/traefik/dynamic.yml
+
+accessLog: {}
+
+log:
+  level: INFO
+
+entryPoints:
+  web:
+    address: ':80'
+    http:
+      middlewares:
+      {% if traefik_expose_compose_paths -%}
+      - strip-compose-paths@file
+      {%- endif %}

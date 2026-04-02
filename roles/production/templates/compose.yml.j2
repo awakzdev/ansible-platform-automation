@@ -1,0 +1,45 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+networks:
+  proxy:
+    external: true
+
+services:
+  production-a:
+    image: ghcr.io/smart-npv/portfolio-app-new/dev:latest
+    pull_policy: always
+    container_name: production-a
+    environment:
+      MYSQL_BASE_URL: "{{ mysql_base_url }}"
+      CI_BASE_URL: https://{{ traefik_host }}
+      CI_ENCRYPTION_KEY: "{{ ci_encryption_key }}"
+      CI_ENV: production
+      CI_LOG_PATH: /dev/stdout
+      MYSQL_DEFAULT_DB: "{{ mysql_default_db }}"
+      MYSQL_FINANCE_DB: "{{ mysql_finance_db }}"
+      MYSQL_ITRACE_DB: "{{ mysql_itrace_db }}"
+    networks:
+      - proxy
+    volumes:
+      - /home/{{ deploy_user }}/uploads:/var/www/html/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.production.rule=Host(`{{ traefik_host }}`)"
+      - "traefik.http.routers.production.entrypoints=web"
+      - "traefik.http.routers.production.service=production"
+      - "traefik.http.services.production.loadbalancer.server.url=production-a,production-b"
+  production-b:
+    image: ghcr.io/smart-npv/portfolio-app-new/dev:latest
+    pull_policy: always
+    container_name: production-b
+    environment:
+      MYSQL_BASE_URL: "{{ mysql_base_url }}"
+      CI_BASE_URL: http://{{ traefik_host }}
+      CI_ENCRYPTION_KEY: "{{ ci_encryption_key }}"
+      CI_ENV: production
+      CI_LOG_PATH: /dev/stdout
+    networks:
+      - proxy
+    volumes:
+      - /home/{{ deploy_user }}/uploads:/var/www/html/uploads
+    labels:
+      - "traefik.enable=true"

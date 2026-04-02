@@ -1,0 +1,33 @@
+---
+- name: Ensure prerequisites are installed
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+      - python3-pip
+      - acl
+      - nfs-common
+    state: present
+    update_cache: yes
+
+- name: Create admin group
+  ansible.builtin.group:
+    name: admin
+    state: present
+
+- name: Create deploy user
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    shell: /bin/bash
+    groups: admin
+    append: yes
+
+- name: Allow deploy user passwordless sudo
+  community.general.sudoers:
+    name: "admin passwordless sudo"
+    state: present
+    group: admin
+    commands: ALL
+    nopassword: true

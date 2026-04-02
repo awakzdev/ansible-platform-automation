@@ -1,0 +1,30 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+name: staging
+
+networks:
+  proxy:
+    external: true
+
+services:
+  staging:
+    image: ghcr.io/smart-npv/portfolio-app-new/dev:latest
+    pull_policy: always
+    container_name: staging
+    environment:
+      MYSQL_BASE_URL: "{{ mysql_base_url }}"
+      CI_BASE_URL: https://{{ traefik_host }}
+      CI_ENCRYPTION_KEY: "{{ ci_encryption_key }}"
+      CI_ENV: development
+      CI_LOG_PATH: /dev/stdout
+      MYSQL_DEFAULT_DB: "{{ mysql_default_db }}"
+      MYSQL_FINANCE_DB: "{{ mysql_finance_db }}"
+      MYSQL_ITRACE_DB: "{{ mysql_itrace_db }}"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.staging.rule=Host(`{{ traefik_host }}`)"
+      - "traefik.http.routers.staging.entrypoints=websecure"
+      - "traefik.http.routers.staging.service=staging"
+      - "traefik.http.services.staging.loadbalancer.server.url=staging"
+      - "traefik.http.routers.staging.tls.certresolver=letsencrypt"

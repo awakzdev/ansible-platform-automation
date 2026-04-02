@@ -1,0 +1,76 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+name: traefik
+
+networks:
+  proxy:
+    driver: bridge
+    name: proxy
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker"
+      - "--providers.file.directory={{ traefik_configuration }}"
+      - "--providers.file.watch=true"
+      - "--providers.docker.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--providers.docker.network=proxy"
+      - "--providers.docker.exposedByDefault=false"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      # Reserved for certificate signing
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email={{ email }}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/acme/acme.json"
+      {% if letsencrypt_staging %}
+      - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      {% endif %}
+    labels:
+      - "traefik.enable=true"
+      # HTTP
+      - "traefik.http.routers.dashboard.rule=Host(`{{ traefik_dashboard_host }}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.middlewares=http-auth"
+      - "traefik.http.middlewares.http-auth.basicauth.users={{ traefik_basic_auth_users }}"
+      # HTTPS
+      - "traefik.http.routers.https.rule=Host(`{{ traefik_dashboard_host }}`)" # Exposes dashboard on HTTPS
+      - "traefik.http.routers.https.entrypoints=websecure"
+      - "traefik.http.routers.https.tls=true"
+      - "traefik.http.routers.https.service=api@internal"
+      - "traefik.http.routers.https.middlewares=https-auth"
+      - "traefik.http.middlewares.https-auth.basicauth.users={{ traefik_basic_auth_users }}"
+      # global redirect to https
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=websecure"
+#      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      # middleware redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https_redirect.redirectscheme.permanent=true"
+      # redirect www to non-www
+      - "traefik.http.routers.www-redirect.rule=Host(`www.{{ traefik_host }}`)"
+#      - "traefik.http.routers.www-redirect.entrypoints=web"
+      - "traefik.http.routers.www-redirect.entrypoints=websecure"
+    environment:
+      - TRAEFIK_CERTIFICATESRESOLVERS_LE_ACME_STORAGE=/acme/acme.json
+      - AWS_ACCESS_KEY_ID={{ aws_access_key_id }}
+      - AWS_SECRET_ACCESS_KEY={{ aws_secret_access_key }}
+      - AWS_REGION={{ aws_region }}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/traefik/dynamic/:/etc/traefik/dynamic/
+      - acme:/acme
+    networks:
+      - proxy
+
+volumes:
+  acme:

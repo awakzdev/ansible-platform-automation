@@ -1,0 +1,30 @@
+---
+# Vault credentials are included here just to showcase what's inside the VAULT and is being passed here.
+aws_access_key_id: "{{ vault_aws_access_key_id }}"
+aws_secret_access_key: "{{ vault_aws_secret_access_key }}"
+# GHCR Credentials to pull from a private repository (stored as a vault and referenced here to showcase where it is being taken from)
+ghcr_user: "{{ vault_ghcr_user }}"
+ghcr_pat: "{{ vault_ghcr_pat }}"
+# Generic traefik configuration
+deploy_user: "deploy"
+deploy_group: "deploy"
+traefik_configuration: /tmp/traefik
+letsencrypt_staging: false
+traefik_host: "dev.portfolio-app.co.il"
+www_redirect_host: "www.dev.portfolio-app.co.il"
+email: "ops@mycompany.com"
+aws_region: "il-central-1"
+provider: "route53"
+traefik_directory: /opt/traefik
+traefik_docker_image: docker.io/traefik:3.0
+traefik_expose_compose_paths: false
+# Application image configuration
+app_docker_image_name: "ghcr.io/mycompany/portfolio-app"
+app_docker_image_tag: "latest"
+app_image_pull_policy: "always"
+# Dev app deployment default secrets
+mysql_base_url: "{{ vault_mysql_base_url }}"
+ci_encryption_key: "REPLACE_ME"
+mysql_default_db: "smartnpv_smartnpv2"
+mysql_finance_db: "smartnpv_finance"
+mysql_itrace_db: "smartnpv_itrace"

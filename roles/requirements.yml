@@ -1,0 +1,6 @@
+---
+roles:
+  - name: geerlingguy.ansible
+    version: 2.3.0
+collections:
+  - community.docker

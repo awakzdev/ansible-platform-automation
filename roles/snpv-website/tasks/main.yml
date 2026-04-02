@@ -1,0 +1,85 @@
+
+- name: Install apt components
+  ansible.builtin.apt:
+    pkg:
+      - apache2
+      - libpng-dev
+      - libzip-dev
+      - zlib1g-dev
+      - php-mysql
+      - php-gd
+      - php-zip
+    state: present
+  become: true
+- name: Enable the Apache2 rewrite module
+  community.general.apache2_module:
+    state: present
+    name: rewrite
+- name: Copy app to server
+  synchronize:
+    src: "{{ app_path }}"
+    dest: "{{ app_path }}"
+    recursive: true
+    delete: false
+- name: Move files to correct location
+  copy:
+    remote_src: true
+    src: "{{ app_path }}/ci/application"
+    dest: "{{ app_path }}"
+- name: Remove ci folder
+  file:
+    state: absent
+    path: "{{ app_path }}/ci"
+- name: Download and unpack CodeIgniter files
+  ansible.builtin.unarchive:
+    src: https://codeload.github.com/bcit-ci/CodeIgniter/zip/3.1.13
+    dest: "{{ app_path }}"
+    remote_src: yes
+    include:
+      - CodeIgniter-3.1.13/index.php
+      - CodeIgniter-3.1.13/system/*
+- name: Move index file
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ app_path }}CodeIgniter-3.1.13/index.php"
+    dest: "{{ app_path }}"
+- name: Move CI system folder
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ app_path }}CodeIgniter-3.1.13/system"
+    dest: "{{ app_path }}"
+- name: Remove codeigniter folder
+  ansible.builtin.file:
+    state: absent
+    path: "{{ app_path }}CodeIgniter-3.1.13"
+- name: Install composer components
+  ansible.builtin.command:
+    chdir: /home/deploy/dev-app/application
+    cmd: composer install
+- name: Link the apache html folder to the app folder
+  file:
+    src: "{{ app_path }}"
+    dest: "/var/www/html"
+    state: link
+  become: yes
+- name: Deploy .htaccess from template
+  ansible.builtin.template:
+    src: .htaccess.j2
+    dest: "{{ app_path }}/.htaccess"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+- name: Deploy config.php from template
+  ansible.builtin.template:
+    src: config.php.j2
+    dest: "{{ app_path }}/application/config/config.php"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+- name: Deploy database.php from template
+  ansible.builtin.template:
+    src: database.php.j2
+    dest: "{{ app_path }}/application/config/database.php"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'

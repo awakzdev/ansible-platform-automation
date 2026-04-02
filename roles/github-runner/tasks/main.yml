@@ -1,0 +1,88 @@
+---
+- name: Verify that required string variables are defined
+  ansible.builtin.assert:
+    that:
+      - ahs_var is defined
+      - ahs_var | length > 0
+      - ahs_var != None
+    fail_msg: "{{ ahs_var }} needs to be set for the role to work"
+    success_msg: "Required variable {{ ahs_var }} is defined"
+  loop_control:
+    loop_var: ahs_var
+  with_items:
+    - github_owner
+    - github_repo
+    - github_registration_token
+    - runner_name
+
+- name: Install prerequisites
+  apt:
+    name:
+      - python3-pexpect
+      - acl
+    state: present
+
+- name: Create a system user for the runner
+  user:
+    name: "{{ runner_user }}"
+    shell: /bin/bash
+    create_home: yes
+
+- name: Create runner directory
+  file:
+    path: "/home/{{ runner_user }}/actions-runner"
+    state: directory
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: '0755'
+
+- name: Download GitHub Actions runner
+  get_url:
+    url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-{{ runner_arch }}-{{ runner_version }}.tar.gz"
+    dest: "/home/{{ runner_user }}/actions-runner/actions-runner-linux-{{ runner_arch }}-{{ runner_version }}.tar.gz"
+    mode: '0755'
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+
+- name: Extract GitHub Actions runner
+  ansible.builtin.unarchive:
+    src: "/home/{{ runner_user }}/actions-runner/actions-runner-linux-{{ runner_arch }}-{{ runner_version }}.tar.gz"
+    dest: "/home/{{ runner_user }}/actions-runner/"
+    creates: "/home/{{ runner_user }}/actions-runner/config.sh"
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    remote_src: yes
+  register: gitlab_extracted
+
+- name: Install dependencies
+  command: ./bin/installdependencies.sh
+  args:
+    chdir: /home/{{ runner_user }}/actions-runner
+  when: gitlab_extracted.changed
+
+- name: Configure GitHub Actions runner
+  command: "./config.sh --url https://github.com/{{ github_owner }}/{{ github_repo }} --token {{ github_registration_token }} --name {{ runner_name }} --unattended"
+  args:
+    chdir: "/home/{{ runner_user }}/actions-runner"
+  become_user: "{{ runner_user }}"
+  when: gitlab_extracted.changed
+
+- name: Add users to docker group
+  user:
+    name: "{{ runner_user }}"
+    groups: docker
+    append: yes
+
+- name: Create the service
+  shell: ./svc.sh install {{ runner_user }}
+  args:
+    chdir: /home/{{ runner_user }}/actions-runner
+    creates: "/etc/systemd/system/actions.runner.{{ github_owner }}-{{ github_repo }}.{{ runner_name }}.service"
+  become: true
+  become_user: root
+
+- name: Start the service
+  service:
+    name: "actions.runner.{{ github_owner }}-{{ github_repo }}.{{ runner_name }}.service"
+    state: started
+    enabled: yes

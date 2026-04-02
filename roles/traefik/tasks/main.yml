@@ -1,0 +1,57 @@
+- name: Ensure Traefik configuration directory exists
+  file:
+    path: "{{ traefik_configuration }}/dynamic"
+    state: directory
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0755'
+  become: true
+
+- name: Copy Traefik middleware configuration file
+  template:
+    src: middleware.yml.j2
+    dest: "{{ traefik_configuration }}/dynamic/middleware.yml"
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0644'
+  become: true
+  become_user: "{{ traefik_user }}"
+
+- name: Copy Traefik TLS configuration template
+  template:
+    src: tls.yml.j2
+    dest: "{{ traefik_configuration }}/dynamic/tls.yml"
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0644'
+  become: true
+  become_user: "{{ traefik_user }}"
+
+- name: Deploy Docker Compose file for Traefik and services
+  template:
+    src: compose.yml.j2
+    dest: "{{ traefik_configuration }}/traefik-compose.yml"
+    owner: "{{ traefik_user }}"
+    group: "{{ traefik_group }}"
+    mode: '0644'
+  become: true
+  become_user: "{{ traefik_user }}"
+
+- name: Login to GHCR
+  docker_login:
+    registry: ghcr.io
+    username: "{{ ghcr_user }}"
+    password: "{{ ghcr_pat }}"
+#    reauthorize: yes
+  become: true
+  become_user: "{{ traefik_user }}"
+
+- name: Create and start services
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_configuration }}"
+    files:
+      - "traefik-compose.yml"
+
+  register: output
+  become: true
+  become_user: "{{ traefik_user }}"

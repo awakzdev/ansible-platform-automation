@@ -1,0 +1,51 @@
+- hosts: all
+  roles:
+  - common
+  become: true
+
+- hosts: automation_servers
+  roles:
+  - geerlingguy.ansible
+  - docker
+  - github-runner
+  vars_files:
+    - group_vars/automation_servers/vars.yml
+    - group_vars/automation_servers/runner_vault
+  become: true
+
+- hosts: application_servers
+  gather_facts: no
+  become: yes
+  roles:
+  - docker
+
+- hosts: application_servers
+  gather_facts: no
+  roles:
+  - traefik
+  vars_files:
+    - group_vars/all/traefik_vault
+
+- hosts: dev
+  gather_facts: no
+  roles:
+  - mysql
+  - dev
+  vars_files:
+    - group_vars/dev/mysql
+
+- hosts: staging
+  gather_facts: no
+  roles:
+  - mysql
+  - staging
+  vars_files:
+    - group_vars/staging/mysql
+
+- hosts: production
+  gather_facts: no
+  roles:
+  - mysql
+  - production
+  vars_files:
+    - group_vars/production/mysql

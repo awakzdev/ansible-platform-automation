@@ -1,0 +1,3 @@
+app_path: "/home/deploy/dev-app/"
+app_user: "deploy"
+app_group: "deploy"

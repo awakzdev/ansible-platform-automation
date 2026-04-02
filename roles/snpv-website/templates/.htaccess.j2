@@ -1,0 +1,16 @@
+Options -Indexes
+DirectoryIndex index.php
+
+<If "-n osenv('CI_ENV')>
+        PassEnv CI_ENV
+</If>
+<Else>
+        SetEnv CI_ENV production
+</Else>
+
+RewriteEngine On
+RewriteBase /
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond $1 !^(index\.php|robots\.txt)
+RewriteRule ^(.*)$ index.php?/$1 [L]

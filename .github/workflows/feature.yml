@@ -1,0 +1,44 @@
+name: Feature
+
+on:
+  push:
+    branches:
+      - "feature/*"
+
+jobs:
+  build:
+    runs-on: self-hosted
+    uses: your-org/your-app/.github/workflows/build.yml@automation
+    with:
+      registry: ghcr.io/your-org/your-app
+    secrets: inherit
+
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Extract branch name and short branch name
+        id: extract_branch
+        run: |
+          # Extract the full branch name
+          FULL_BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          # Remove 'feature/' prefix if present to get the short branch name
+          SHORT_BRANCH_NAME=${FULL_BRANCH_NAME#feature/}
+          # Set environment variables for use in later steps
+          echo "BRANCH_NAME=${FULL_BRANCH_NAME}" >> $GITHUB_ENV
+          echo "SHORT_BRANCH_NAME=${SHORT_BRANCH_NAME}" >> $GITHUB_ENV
+          echo "Full branch name: $FULL_BRANCH_NAME"
+          echo "Short branch name: $SHORT_BRANCH_NAME"
+
+      - name: Check outputs
+        run: |
+          echo "Branch name: ${{ env.BRANCH_NAME }}"
+          echo "Short branch name: ${{ env.SHORT_BRANCH_NAME }}"
+
+      - name: Deploy
+        working-directory: /home/deploy/portfolio-app-infrastructure
+        run: ansible-playbook -i inventory.ini feature-website-deploy.yml --limit dev --extra-vars "short_branch_name=${{ env.SHORT_BRANCH_NAME }}" --vault-password-file vaultpass
+

@@ -1,0 +1,24 @@
+name: Dev
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    uses: your-org/your-app/.github/workflows/build.yml@automation
+    with:
+      registry: ghcr.io/your-org/your-app
+    secrets: inherit
+
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    env:
+      ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+    steps:
+      - name: Deploy
+        working-directory: /home/deploy/portfolio-app-infrastructure
+        run: ansible-playbook -i inventory.ini site.yml --limit production --vault-password-file vaultpass
+

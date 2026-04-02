@@ -1,0 +1,7 @@
+- hosts: dev
+  gather_facts: no
+  vars_files:
+    - group_vars/all/traefik_vault
+    - group_vars/dev/mysql
+  roles:
+    - feature

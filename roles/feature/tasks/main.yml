@@ -1,0 +1,63 @@
+# ---
+# Ensure Traefik configuration directory exists only when creating
+- name: Ensure Traefik configuration directory exists
+  when: branch_action != "delete"
+  file:
+    path: "{{ traefik_configuration }}/feature"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0755'
+
+# Deploy Docker Compose file only when creating
+- name: Deploy Docker Compose file for Traefik and services
+  when: branch_action != "delete"
+  template:
+    src: feature-compose.yml.j2
+    dest: "{{ traefik_configuration }}/feature/{{ short_branch_name }}-docker-compose.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0644'
+
+# Login to GHCR only when creating
+- name: Login to GHCR
+  when: branch_action != "delete"
+  docker_login:
+    registry: ghcr.io
+    username: "{{ ghcr_user }}"
+    password: "{{ ghcr_pat }}"
+
+# Create and start services only when creating
+- name: Create and start services
+  when: branch_action != "delete"
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_configuration }}/feature"
+    files:
+      - "{{ short_branch_name }}-docker-compose.yml"
+  register: output
+
+# ----
+
+# Stop and remove Docker Compose service
+- name: Stop and remove Docker Compose service
+  when: branch_action == "delete"
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_configuration }}/feature"
+    files:
+      - "{{ short_branch_name }}-docker-compose.yml"
+    state: absent
+  register: stop_output
+
+# Remove the Docker Compose file
+- name: Remove Docker Compose file
+  when: branch_action == "delete"
+  file:
+    path: "{{ traefik_configuration }}/feature/{{ short_branch_name }}-docker-compose.yml"
+    state: absent
+
+- name: Remove image
+  when: branch_action == "delete"
+  community.docker.docker_image:
+    state: absent
+    name: ghcr.io/smart-npv/portfolio-app-new/{{ short_branch_name }}
+    tag: latest

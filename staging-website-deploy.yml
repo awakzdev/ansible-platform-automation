@@ -1,0 +1,9 @@
+- hosts: staging
+  become: false
+  gather_facts: no
+  roles:
+    - staging
+  vars_files:
+    - group_vars/staging/traefik_vault
+    - group_vars/staging/mysql
+

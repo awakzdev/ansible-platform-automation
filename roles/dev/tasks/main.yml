@@ -1,0 +1,35 @@
+# ---
+# Ensure Traefik configuration directory exists only when creating
+- name: Ensure Traefik configuration directory exists
+  file:
+    path: "{{ traefik_configuration }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0755'
+
+# Deploy Docker Compose file only when creating
+- name: Deploy Docker Compose file for Traefik and services
+  template:
+    src: dev-compose.yml.j2
+    dest: "{{ traefik_configuration }}/dev-compose.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0644'
+
+# Login to GHCR only when creating
+- name: Login to GHCR
+  docker_login:
+    registry: ghcr.io
+    username: "{{ ghcr_user }}"
+    password: "{{ ghcr_pat }}"
+
+# Create and start services only when creating
+- name: Create and start services
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_configuration }}"
+    remove_orphans: true
+    files:
+      - "dev-compose.yml"
+  register: output
+

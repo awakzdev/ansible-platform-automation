@@ -1,0 +1,54 @@
+# ---
+# Ensure Traefik configuration directory exists only when creating
+- name: Ensure Traefik configuration directory exists
+  file:
+    path: "{{ traefik_configuration }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0755'
+  become: true
+
+# Deploy Docker Compose file only when creating
+- name: Deploy Docker Compose file for Traefik and services
+  template:
+    src: compose.yml.j2
+    dest: "{{ traefik_configuration }}/production-compose.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0644'
+# Login to GHCR only when creating
+
+- name: Login to GHCR
+  docker_login:
+    registry: ghcr.io
+    username: "{{ ghcr_user }}"
+    password: "{{ ghcr_pat }}"
+
+- name: Ensure uploads directory exists
+  file:
+    path: "/home/{{ deploy_user }}/uploads"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0755'
+  become: true
+
+
+- name: Mount external uploads share
+  ansible.posix.mount:
+    src: "{{ nfs_server_ip }}:{{ nfs_share_path }}"
+    path: "/home/{{ deploy_user }}/uploads"
+    opts: nofail,noatime,nolock,intr,tcp,acdirmin=30,acdirmax=90,acregmin=5,acregmax=60
+    state: mounted
+    fstype: nfs
+  become: true
+
+# Create and start services only when creating
+- name: Create and start services
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_configuration }}"
+    files:
+      - "production-compose.yml"
+  register: output
+

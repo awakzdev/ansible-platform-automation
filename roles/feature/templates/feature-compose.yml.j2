@@ -1,0 +1,27 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+networks:
+  proxy:
+    external: true
+
+services:
+  {{short_branch_name }}:
+    image: {{ app_docker_image_name }}/{{ short_branch_name }}:latest
+    pull_policy: always
+    container_name: {{ short_branch_name }}
+    environment:
+      MYSQL_BASE_URL: "{{ mysql_base_url }}"
+      CI_BASE_URL: https://{{ traefik_host }}/{{ short_branch_name }}
+      CI_ENCRYPTION_KEY: "{{ ci_encryption_key }}"
+      CI_ENV: development
+      CI_LOG_PATH: /dev/stdout
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.feature-{{ short_branch_name }}.rule=Host(`{{ traefik_host }}`) && PathPrefix(`/{{ short_branch_name }}`)"
+      - "traefik.http.routers.feature-{{ short_branch_name }}.middlewares=feature-{{ short_branch_name }}-stripprefix"
+      - "traefik.http.middlewares.feature-{{ short_branch_name }}-stripprefix.stripprefix.prefixes=/{{ short_branch_name }}"
+      - "traefik.http.routers.feature-{{ short_branch_name }}.tls=true"
+      - "traefik.http.routers.feature-{{ short_branch_name }}.entrypoints=websecure"
+      - "traefik.http.routers.feature-{{ short_branch_name }}.tls.certresolver=letsencrypt"
+    networks:
+      - proxy

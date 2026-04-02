@@ -1,0 +1,8 @@
+---
+traefik_host: "app.example.com"
+traefik_dashboard_host: "dashboard.{{ traefik_host }}"
+www_redirect_host: "www.{{ traefik_host }}"
+traefik_expose_compose_paths: true
+app_docker_image_name: "ghcr.io/your-org/your-app"
+app_docker_image_tag: "latest"
+app_image_pull_policy: "always"

@@ -1,0 +1,39 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+name: mysql
+
+networks:
+  proxy:
+    external: true
+
+services:
+  mysql:
+    image: mysql:8.0.39
+    pull_policy: missing
+    container_name: mysql
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+      MYSQL_DATABASE: "{{ mysql_database }}"
+      MYSQL_USER: "{{ mysql_user }}"
+      MYSQL_PASSWORD: "{{ mysql_password }}"
+    volumes:
+      - /home/{{ deploy_user }}/mariadb-data:/var/lib/mysql
+    networks:
+      - proxy
+  phpmyadmin:
+    image: phpmyadmin:latest
+    pull_policy: missing
+    container_name: phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.{{ traefik_host }}`)"
+      - "traefik.http.routers.phpmyadmin.entrypoints=web"
+      - "traefik.http.routers.phpmyadmin.service=phpmyadmin"
+      - "traefik.http.services.phpmyadmin.loadbalancer.server.url=phpmyadmin"
+

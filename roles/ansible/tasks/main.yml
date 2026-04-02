@@ -1,0 +1,19 @@
+---
+- name: Ensure EPEL repository is enabled
+  yum:
+    name: epel-release
+    state: present
+
+- name: Install Ansible
+  yum:
+    name: ansible
+    state: present
+
+- name: Verify Ansible installation
+  command: ansible --version
+  register: ansible_version
+  changed_when: false
+
+- name: Debug Ansible version
+  debug:
+    var: ansible_version

@@ -1,0 +1,31 @@
+name: Dev
+
+on:
+  push:
+    branches:
+      'dev'
+
+jobs:
+  build:
+    uses: your-org/your-app/.github/workflows/build.yml@automation
+    with:
+      registry: ghcr.io/your-org/your-app
+    secrets: inherit
+
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    env:
+      ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+      app-name: ${{ github.ref_name }}-app
+    steps:
+      - name: Run a multi-line script
+        run: |
+          rm -rf /home/deploy/${{ env.app-name }}
+          mkdir -p /home/deploy/${{ env.app-name }}
+          cp -r . /home/deploy/${{ env.app-name }}
+
+      - name: Deploy
+        working-directory: /home/deploy/portfolio-app-infrastructure
+        run: ansible-playbook -i inventory.ini ${{ github.ref_name }}-website-deploy.yml --limit ${{ github.ref_name }} --vault-password-file vaultpass
+
